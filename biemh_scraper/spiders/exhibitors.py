@@ -7,26 +7,45 @@ class ExhibitorsSpider(scrapy.Spider):
 
   def parseexhibitor(self, response):
     name=response.xpath("//*/div[@class='standard_wrapper']/h2/text()").extract()[0]
-    addr, addr2, tel, _ = response.xpath("//*[@class='medio']/p/text()").extract()
-    address=addr+addr2
-    telephone=tel.lstrip(" Tel.: ")
-    web=response.xpath("//*[@class='medio']/p/a/text()").extract()[0]
-    stand=response.xpath("//*/h4/text()").extract()[0]
-    description="\n".join(response.xpath(".//*/div[@class='fila'][2]/div/text()").extract())
-    sector=response.xpath("//*/div[@class='fila'][3]/ul/li/text()").extract()
-    countries=response.xpath("//*/div[@class='fila'][4]/ul/li/text()").extract()
-    categories=response.xpath("//*/div[@class='fila'][5]/ul/li/text()").extract()
+    stand=response.xpath("//*/h4/text()").extract()[0].lstrip("Stand: ")
+    description="".join(response.xpath(".//*/div[@class='fila'][2]/div/text()").extract())
+
+    data=response.xpath("//div[@class='fila']/ul/li/text()").extract()
+    sector=[]
+    countries=[]
+    categories=[]
+    for item in data:
+      if item.isupper(): categories.append(item)
+      elif any(i in item for i in [",",".",":","-"]): sector.append(item)
+      else: countries.append(item)
+
+    contactinfo=response.xpath("//p[@class='fila']/text()").extract()
+    addr=[]
+    telephone=""
+    fax=""
+    for item in contactinfo:
+      if "Tel" in item: telephone=item[-9:]
+      elif "Fax" in item: fax=item[-9:]
+      if item.isupper(): addr.append(item)
+    address=" ".join(addr)
+
+    try:
+      web=response.xpath("//p[@class='fila']/a/@href").extract()[0]
+    except IndexError:
+      web=""
+
 
     yield { "name": name, 
-            "contact":{
-              "address": address, 
-              "telephone": telephone, 
-              "stand": stand
-            }
-            "description": description
-            "sector": sector
-            "countries": []
-            "categories": []
+            "contact": {
+               "address": address, 
+               "telephone": telephone, 
+               "web": web,
+               "stand": stand
+            },
+            "description": description,
+            "sector": sector,
+            "countries": countries,
+            "categories": categories
           }
 
   def parse(self, response):
