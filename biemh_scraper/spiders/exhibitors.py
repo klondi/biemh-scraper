@@ -7,11 +7,15 @@ class ExhibitorsSpider(scrapy.Spider):
 
   def parseexhibitor(self, response):
     name=response.xpath("//*/div[@class='standard_wrapper']/h2/text()").extract()[0]
-    addr, addr2, tel = response.xpath("//*[@class='medio']/p/text()").extract()
+    addr, addr2, tel, _ = response.xpath("//*[@class='medio']/p/text()").extract()
     address=addr+addr2
     telephone=tel.lstrip(" Tel.: ")
     web=response.xpath("//*[@class='medio']/p/a/text()").extract()[0]
-    stand=response.xpath(".//*/h4/text()").extract()[0]
+    stand=response.xpath("//*/h4/text()").extract()[0]
+    description="\n".join(response.xpath(".//*/div[@class='fila'][2]/div/text()").extract())
+    sector=response.xpath("//*/div[@class='fila'][3]/ul/li/text()").extract()
+    countries=response.xpath("//*/div[@class='fila'][4]/ul/li/text()").extract()
+    categories=response.xpath("//*/div[@class='fila'][5]/ul/li/text()").extract()
 
     yield { "name": name, 
             "contact":{
@@ -19,7 +23,10 @@ class ExhibitorsSpider(scrapy.Spider):
               "telephone": telephone, 
               "stand": stand
             }
-
+            "description": description
+            "sector": sector
+            "countries": []
+            "categories": []
           }
 
   def parse(self, response):
