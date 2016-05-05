@@ -1,11 +1,13 @@
 import scrapy
 
-class ExhibitorsSpider(scrapy.Spider):
+class exhibitors(scrapy.Spider):
+
   name="exhibitors"
   allowed_domains=["biemh.bilbaoexhibitioncentre.com"]
   start_urls=['http://biemh.bilbaoexhibitioncentre.com/en/exhibitor-directory/']
 
   def parseexhibitor(self, response):
+
     name=response.xpath("//*/div[@class='standard_wrapper']/h2/text()").extract()[0]
     stand=response.xpath("//*/h4/text()").extract()[0].lstrip("Stand: ")
     description="".join(response.xpath(".//*/div[@class='fila'][2]/div/text()").extract())
@@ -16,7 +18,7 @@ class ExhibitorsSpider(scrapy.Spider):
     categories=[]
     for item in data:
       if item.isupper(): categories.append(item)
-      elif any(i in item for i in [",",".",":","-"]): sector.append(item)
+      elif any(i in item for i in [",",".",":","-"," "]): sector.append(item)
       else: countries.append(item)
 
     contactinfo=response.xpath("//p[@class='fila']/text()").extract()
@@ -24,8 +26,8 @@ class ExhibitorsSpider(scrapy.Spider):
     telephone=""
     fax=""
     for item in contactinfo:
-      if "Tel" in item: telephone=item[-9:]
-      elif "Fax" in item: fax=item[-9:]
+      if "Tel" in item: telephone=int(item[-9:])
+      elif "Fax" in item: fax=int(item[-9:])
       if item.isupper(): addr.append(item)
     address=" ".join(addr)
 
@@ -34,13 +36,13 @@ class ExhibitorsSpider(scrapy.Spider):
     except IndexError:
       web=""
 
-
     yield { "name": name, 
             "contact": {
-               "address": address, 
-               "telephone": telephone, 
-               "web": web,
-               "stand": stand
+              "address": address, 
+              "telephone": telephone, 
+              "fax": fax,
+              "web": web,
+              "stand": stand
             },
             "description": description,
             "sector": sector,
@@ -49,6 +51,7 @@ class ExhibitorsSpider(scrapy.Spider):
           }
 
   def parse(self, response):
+
     standsa=response.xpath("//*[@class='resaltadoS']/td[@class='titulo']/a/@href").extract()
     standsb=response.xpath("//*[@class='resaltadoN']/td[@class='titulo']/a/@href").extract()
     for stand in standsa+standsb:
@@ -58,4 +61,3 @@ class ExhibitorsSpider(scrapy.Spider):
     nexturl=response.xpath("//*[@class='resultados']/div[@class='tablenav']/div/a[@class='next page-numbers']/@href").extract()
     if nexturl: nexturl=response.urljoin(nexturl[0])
     yield scrapy.Request(nexturl, callback=self.parse)
-
