@@ -71,6 +71,8 @@ class exhibitors(scrapy.Spider):
       standurl=response.urljoin(stand)
       yield scrapy.Request(standurl,callback=self.parseexhibitor)
 
+
     nexturl=response.xpath("//*[@class='resultados']/div[@class='tablenav']/div/a[@class='next page-numbers']/@href").extract()
-    if nexturl: nexturl=response.urljoin(nexturl[0])
+    # Next button URLs are also found in other search tabs. when only 2 tabs have it, it's the last page
+    if nexturl and len(nexturl)==3: nexturl=response.urljoin(nexturl[0])
     yield scrapy.Request(nexturl, callback=self.parse)
