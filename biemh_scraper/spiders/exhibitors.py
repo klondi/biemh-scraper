@@ -21,25 +21,28 @@ class exhibitors(scrapy.Spider):
     sector=[]
     countries=[]
     categories=[]
+    misc_information=[]
     for item in data:
       if item.isupper(): categories.append(item)
       # Will put 2+ word countries in the sector field and single word
       # sectors into the country field. 
       # TO-DO (maybe): Filtering by list of countries
       elif any(i in item for i in [",",".",":","-"," "]): sector.append(item)
-      else: countries.append(item)
+      elif len(item)==1: countries.append(item)
+      else misc_information.append(item)
 
     # Assumes everything in p is contact info. May screw things up
     contactinfo=response.xpath("//p[@class='fila']/text()").extract()
     addr=[]
-    telephone=0
-    fax=0
+    telephone=""
+    fax=""
+    misccontact=""
     for item in contactinfo:
-      if "Tel" in item: telephone=int(item[-9:])
-      elif "Fax" in item: fax=int(item[-9:])
-      if item.isupper(): addr.append(item)
+      if "Tel" in item: telephone=item.lstrip"Tel.: ")
+      elif "Fax" in item: fax=item.lstrip("Fax: ")
+      elif item.isupper(): addr.append(item)
+      else misccontact=item
     address=" ".join(addr)
-      # TO-DO (maybe): Add an "other info" field and see what happens
 
     # Exhibitor page may or may not have a website
     try:
@@ -54,11 +57,13 @@ class exhibitors(scrapy.Spider):
               "fax": fax,
               "web": web,
               "stand": stand
+              "misc_contactinfo": misccontact
             },
             "description": description,
             "sector": sector,
             "countries": countries,
             "categories": categories
+            "misc_info": misc_information
           }
 
   def parse(self, response):
