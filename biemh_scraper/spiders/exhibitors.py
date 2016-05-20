@@ -13,7 +13,7 @@ class exhibitors(scrapy.Spider):
 
     # Assumes descriptin will always be in the second fila div. 
     # TO-DO (maybe): Get videos, pic urls, etc from description
-    description="".join(response.xpath("//*/div[@class='fila'][2]/div/text()").extract())
+    description="".join(response.xpath("//*/div[@class='fila'][2]/div/text()").extract()).strip()
 
     # Since the data is not ordered in the site, this takes all the data
     # and processes it later
@@ -22,14 +22,12 @@ class exhibitors(scrapy.Spider):
     countries=[]
     categories=[]
     misc_information=[]
+    country_list=["Russian Federation"]
     for item in data:
       if item.isupper(): categories.append(item)
-      # Will put 2+ word countries in the sector field and single word
-      # sectors into the country field. 
-      # TO-DO (maybe): Filtering by list of countries
+      elif len(item)==1 or item in country_list: countries.append(item)
       elif any(i in item for i in [",",".",":","-"," "]): sector.append(item)
-      elif len(item)==1: countries.append(item)
-      else misc_information.append(item)
+      else: misc_information.append(item)
 
     # Assumes everything in p is contact info. May screw things up
     contactinfo=response.xpath("//p[@class='fila']/text()").extract()
@@ -38,10 +36,10 @@ class exhibitors(scrapy.Spider):
     fax=""
     misccontact=""
     for item in contactinfo:
-      if "Tel" in item: telephone=item.lstrip"Tel.: ")
+      if "Tel" in item: telephone=item.lstrip("Tel.: ")
       elif "Fax" in item: fax=item.lstrip("Fax: ")
       elif item.isupper(): addr.append(item)
-      else misccontact=item
+      else: misccontact=item
     address=" ".join(addr)
 
     # Exhibitor page may or may not have a website
@@ -56,13 +54,13 @@ class exhibitors(scrapy.Spider):
               "telephone": telephone, 
               "fax": fax,
               "web": web,
-              "stand": stand
+              "stand": stand,
               "misc_contactinfo": misccontact
             },
             "description": description,
             "sector": sector,
             "countries": countries,
-            "categories": categories
+            "categories": categories,
             "misc_info": misc_information
           }
 
@@ -79,5 +77,7 @@ class exhibitors(scrapy.Spider):
 
     nexturl=response.xpath("//*[@class='resultados']/div[@class='tablenav']/div/a[@class='next page-numbers']/@href").extract()
     # Next button URLs are also found in other search tabs. when only 2 tabs have it, it's the last page
-    if nexturl and len(nexturl)==3: nexturl=response.urljoin(nexturl[0])
-    yield scrapy.Request(nexturl, callback=self.parse)
+    if len(nexturl)==3: 
+      nexturl=response.urljoin(nexturl[0])
+      # Callback sometimes fail and skips a page
+      yield scrapy.Request(nexturl, callback=self.parse)
