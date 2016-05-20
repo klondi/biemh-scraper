@@ -11,7 +11,7 @@ class exhibitors(scrapy.Spider):
     name=response.xpath("//*/div[@class='standard_wrapper']/h2/text()").extract()[0]
     stand=response.xpath("//*/h4/text()").extract()[0].lstrip("Stand: ")
 
-    # Assumes descriptin will always be in the second fila div. 
+    # Assumes description will always be in the second fila div. 
     # TO-DO (maybe): Get videos, pic urls, etc from description
     description="".join(response.xpath("//*/div[@class='fila'][2]/div/text()").extract()).strip()
 
@@ -22,11 +22,12 @@ class exhibitors(scrapy.Spider):
     countries=[]
     categories=[]
     misc_information=[]
-    country_list=["Russian Federation"]
+    country_list=["Russian Federation", "United States", "United Kingdom"]
     for item in data:
       if item.isupper(): categories.append(item)
-      elif len(item)==1 or item in country_list: countries.append(item)
+      elif item in country_list: countries.append(item)
       elif any(i in item for i in [",",".",":","-"," "]): sector.append(item)
+      elif len(item)==1: countries.append(item)
       else: misc_information.append(item)
 
     # Assumes everything in p is contact info. May screw things up
@@ -43,10 +44,8 @@ class exhibitors(scrapy.Spider):
     address=" ".join(addr)
 
     # Exhibitor page may or may not have a website
-    try:
-      web=response.xpath("//p[@class='fila']/a/@href").extract()[0]
-    except IndexError:
-      web=""
+    try:                web=response.xpath("//p[@class='fila']/a/@href").extract()[0]
+    except IndexError:  web=""
 
     yield { "name": name, 
             "contact": {
@@ -73,7 +72,6 @@ class exhibitors(scrapy.Spider):
     for stand in standsa+standsb:
       standurl=response.urljoin(stand)
       yield scrapy.Request(standurl,callback=self.parseexhibitor)
-
 
     nexturl=response.xpath("//*[@class='resultados']/div[@class='tablenav']/div/a[@class='next page-numbers']/@href").extract()
     # Next button URLs are also found in other search tabs. when only 2 tabs have it, it's the last page
